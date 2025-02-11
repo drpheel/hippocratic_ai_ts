@@ -1,0 +1,46 @@
+version: '3.8'
+services:
+  db:
+    image: mysql:latest
+    command: '--authentication-policy=caching_sha2_password --sort-buffer-size=1024000000'
+    restart: always
+    healthcheck:
+      test: ['CMD-SHELL', 'mysqladmin ping -h 127.0.0.1 --password="$$(cat /run/secrets/db-password)" --silent']
+      interval: 3s
+      retries: 5
+      start_period: 30s
+    secrets:
+      - db-password
+    volumes:
+      - dev-db-data:/var/lib/mysql
+      - ./db/mysql/init:/docker-entrypoint-initdb.d
+    networks:
+      - backnet
+    environment:
+      - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/db-password
+    expose:
+      - 3306
+      - 33060
+  flask-app:
+    build: .
+    ports:
+      - "5000:5000"
+    secrets:
+      - db-password      
+    volumes:
+      - ./services/:/services/
+      - local-blobstore:/services/instance
+    networks:
+      - backnet      
+    environment:
+      - CLOUD_SQL_DATABASE_NAME=primary
+      - ALLOW_CORS=true
+      - IS_LOCAL=true
+volumes:
+  dev-db-data:
+  local-blobstore:
+secrets:
+  db-password:
+    file: db/password.txt
+networks:
+  backnet:
