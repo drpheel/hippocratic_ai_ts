@@ -29,7 +29,6 @@ services:
       - db-password      
     volumes:
       - ./services/:/services/
-      - local-blobstore:/services/instance
     networks:
       - backnet      
     environment:
@@ -38,7 +37,6 @@ services:
       - IS_LOCAL=true
 volumes:
   dev-db-data:
-  local-blobstore:
 secrets:
   db-password:
     file: db/password.txt

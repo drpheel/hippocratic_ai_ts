@@ -41,6 +41,17 @@
   color: #888;
 }
 
+.tournament-container {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
 /* Container */
 .bracket-container {
   top: 0;
@@ -151,4 +162,29 @@
   position: absolute;
   transform: translateX(-50%);
   align-items: center;
+}
+
+.tournament-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.tournament-title {
+  flex: 1;
+  text-align: center;
+  width: fit-content;  
+}
+
+.clickable-text {
+  cursor: pointer;
+}
+
+.clickable-text:hover {
+  color: #42a5f5;
+}
+
+.menu-box {
+  padding-top: 20px;
 }

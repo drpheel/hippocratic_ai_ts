@@ -1,9 +1,9 @@
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import engine
 from flask_cors import CORS
+from wonderwords import RandomSentence
 import os
-from flask import request
 import random
 import string
 import logging
@@ -32,10 +32,9 @@ db_url = get_db_url()
 logging.info(f"DB URL: {db_url}")
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-CORS(app, supports_credentials=True, origins=["http://localhost:*"])
+CORS(app, supports_credentials=True, origins=["http://localhost:5173"])
 db = SQLAlchemy(app)
 
-# Python
 class PromptGroup(db.Model):
     __tablename__ = "PROMPT_GROUPS"
     id = db.Column(db.Integer, primary_key=True)
@@ -55,6 +54,8 @@ class Battle(db.Model):
     prompt_1 = db.Column(db.Integer, db.ForeignKey("PROMPTS.id"), nullable=False)
     prompt_2 = db.Column(db.Integer, db.ForeignKey("PROMPTS.id"), nullable=False)
     winner = db.Column(db.Integer, db.ForeignKey("PROMPTS.id"))
+    x_pos = db.Column(db.Integer)
+    y_pos = db.Column(db.Integer)
     round = db.Column(db.Integer)
     next_match = db.Column(db.Integer, db.ForeignKey("BATTLE.id"))
     prompt_group_id = db.Column(db.Integer, db.ForeignKey("PROMPT_GROUPS.id"))
@@ -82,10 +83,10 @@ def create_group():
     db.session.add(new_group)
     db.session.commit()
 
-
-
     for _ in range(group_size):
-        random_value = generate_random_value()
+        random_value = RandomSentence().sentence()
+        if random_value.endswith('.'):
+            random_value = random_value[:-1] + '?'
         new_prompt = Prompt(prompt_group_id=new_group.id, value=random_value, response="")
         db.session.add(new_prompt)
     db.session.commit()
@@ -104,7 +105,11 @@ def update_prompts():
         existing_prompt = Prompt.query.get(prompt_id)
         if existing_prompt:
             existing_prompt.value = new_value
-            existing_prompt.response = generate_random_value(5000)
+            words = []
+            while len(words) < 200:
+                sentence = RandomSentence().sentence()
+                words.extend(sentence.split())
+            existing_prompt.response = " ".join(words[:500])
 
     db.session.commit()
     battles = [];
@@ -115,15 +120,13 @@ def update_prompts():
     match_to_coordinates = {}
     PADDING_OFFSET = 20
     TOP_OFFSET = 150
-
-    logging.info(f"Data: {data}")
     group_id = data[0]['prompt_group_id']
     # Create first round
     for i in range(0, len(data), 2):
         if i + 1 < len(data):
-            new_battle = Battle(prompt_1=data[i]['id'], prompt_2=data[i + 1]['id'], round=current_round, prompt_group_id=group_id, prompt_group_index=battle_index)
+            new_battle = Battle(prompt_1=data[i]['id'], prompt_2=data[i + 1]['id'], round=current_round, prompt_group_id=group_id, prompt_group_index=battle_index, x_pos=0, y_pos=(len(current_battles) * 140))
         else:
-            new_battle = Battle(prompt_1=data[i]['id'], prompt_2=None, round=current_round, prompt_group_id=group_id, prompt_group_index=battle_index)
+            new_battle = Battle(prompt_1=data[i]['id'], prompt_2=None, round=current_round, prompt_group_id=group_id, prompt_group_index=battle_index, x_pos=0, y_pos=(len(current_battles) * 140))
         db.session.add(new_battle)
         db.session.commit()
         battle_index += 1
@@ -136,8 +139,8 @@ def update_prompts():
             "teamB_ID": data[i + 1]['id'] if i + 1 < len(data) else None,
             "winner": None,
             "nextBattleId": None,
-            "Yposition": len(current_battles) * 140,
-            "Xposition": 0
+            "Yposition": new_battle.y_pos,
+            "Xposition": new_battle.x_pos
         }
         current_battles.append(battle_blob)
         match_to_coordinates[new_battle.id] = { 'x': PADDING_OFFSET, 'y': (len(current_battles) * 140) + TOP_OFFSET }
@@ -157,7 +160,7 @@ def update_prompts():
                 ) / 2
             else:
                 y_pos = current_battles[i]["Yposition"]
-            new_battle = Battle(prompt_1=None, prompt_2=None, round=current_round, prompt_group_id=group_id, prompt_group_index=battle_index)
+            new_battle = Battle(prompt_1=None, prompt_2=None, round=current_round, prompt_group_id=group_id, prompt_group_index=battle_index, x_pos=(current_round - 1) * 200, y_pos=y_pos)
             db.session.add(new_battle)
             db.session.commit()
             battle_index += 1
@@ -170,8 +173,8 @@ def update_prompts():
                 "teamB_ID": None,
                 "winner": None,
                 "nextBattleId": None,
-                "Yposition": y_pos,
-                "Xposition": (current_round - 1) * 200
+                "Yposition": new_battle.y_pos,
+                "Xposition": new_battle.x_pos
             }
             match_to_coordinates[new_battle.id] = { 'x': next_battle_blob["Xposition"] + PADDING_OFFSET, 'y': next_battle_blob["Yposition"] }
             current_battles[i]["nextBattleId"] = new_battle.id
@@ -190,6 +193,38 @@ def update_prompts():
 
     db.session.commit()
     return jsonify({"message": "Prompts updated", 'battles': battles, 'matchToCoordinates': match_to_coordinates}), 200
+
+@app.route("/list_battles_by_group", methods=["GET"])
+def list_battles_by_group():
+    group_id = request.args.get("prompt_group_id")
+    if not group_id:
+        return jsonify({"error": "Missing prompt_group_id"}), 400
+
+    battles = Battle.query.filter_by(prompt_group_id=group_id).order_by(Battle.prompt_group_index).all()
+    winner_value = None
+    battle_blobs = []
+    for b in battles:
+        p1 = Prompt.query.get(b.prompt_1)
+        p2 = Prompt.query.get(b.prompt_2)
+        if b.winner:
+            if b.winner == p1.id:
+                winner_value = p1.value
+            elif b.winner == p2.id:
+                winner_value = p2.value
+        battle_blobs.append({
+            "id": b.id,
+            "round": b.round,
+            "teamA": p1.value if p1 else None,
+            "teamB": p2.value if p2 else None,
+            "teamA_ID": b.prompt_1,
+            "teamB_ID": b.prompt_2,
+            "winner": winner_value,
+            "nextBattleId": b.next_match,
+            "prompt_group_index": b.prompt_group_index,
+            "Yposition": b.y_pos,
+            "Xposition": b.x_pos,
+        })
+    return jsonify(battle_blobs), 200
 
 @app.route("/get_battle", methods=["GET"])
 def get_battle():
@@ -233,6 +268,17 @@ def update_battle_winner():
             next_battle.prompt_2 = winner_prompt_id
     db.session.commit()
     return jsonify({"message": "Battle winner updated"}), 200
+
+@app.route("/list_groups", methods=["GET"])
+def list_groups():
+    groups = PromptGroup.query.all()
+    result = [
+        {"id": group.id, "question": group.question, "group_size": group.group_size}
+        for group in groups
+        if Battle.query.filter_by(prompt_group_id=group.id).first() is not None
+    ]
+    return jsonify(result), 200
+
 
 if __name__ == "__main__":
     logging.info("Starting the server")

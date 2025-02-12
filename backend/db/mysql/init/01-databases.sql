@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS BATTLE (
     prompt_group_index INT NOT NULL,
     round INT NOT NULL,
     winner INT DEFAULT NULL,
+    x_pos INT,
+    y_pos INT,
     PRIMARY KEY (id),
     FOREIGN KEY (prompt_group_id) REFERENCES PROMPT_GROUPS(id),
     FOREIGN KEY (prompt_1) REFERENCES PROMPTS(id),
