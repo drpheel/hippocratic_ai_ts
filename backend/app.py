@@ -57,7 +57,7 @@ class Battle(db.Model):
     x_pos = db.Column(db.Integer)
     y_pos = db.Column(db.Integer)
     round = db.Column(db.Integer)
-    next_match = db.Column(db.Integer, db.ForeignKey("BATTLE.id"))
+    next_battle = db.Column(db.Integer, db.ForeignKey("BATTLE.id"))
     prompt_group_id = db.Column(db.Integer, db.ForeignKey("PROMPT_GROUPS.id"))
     prompt_group_index = db.Column(db.Integer)
 
@@ -116,10 +116,6 @@ def update_prompts():
     battle_index = 0
     current_round = 1
     current_battles = []
-
-    match_to_coordinates = {}
-    PADDING_OFFSET = 20
-    TOP_OFFSET = 150
     group_id = data[0]['prompt_group_id']
     # Create first round
     for i in range(0, len(data), 2):
@@ -143,7 +139,6 @@ def update_prompts():
             "Xposition": new_battle.x_pos
         }
         current_battles.append(battle_blob)
-        match_to_coordinates[new_battle.id] = { 'x': PADDING_OFFSET, 'y': (len(current_battles) * 140) + TOP_OFFSET }
 
     battles.extend(current_battles)
 
@@ -176,15 +171,14 @@ def update_prompts():
                 "Yposition": new_battle.y_pos,
                 "Xposition": new_battle.x_pos
             }
-            match_to_coordinates[new_battle.id] = { 'x': next_battle_blob["Xposition"] + PADDING_OFFSET, 'y': next_battle_blob["Yposition"] }
             current_battles[i]["nextBattleId"] = new_battle.id
             logging.info(f"Current battle: {current_battles[i]}")
             parent_battle_a = Battle.query.filter_by(id=current_battles[i]["id"]).first()
-            parent_battle_a.next_match = new_battle.id
+            parent_battle_a.next_battle = new_battle.id
             if i + 1 < len(current_battles):
                 current_battles[i + 1]["nextBattleId"] = new_battle.id
                 parent_battle_b = Battle.query.filter_by(id=current_battles[i + 1]["id"]).first()
-                parent_battle_b.next_match = new_battle.id
+                parent_battle_b.next_battle = new_battle.id
 
             next_battles.append(next_battle_blob)
 
@@ -192,7 +186,7 @@ def update_prompts():
         current_battles = next_battles
 
     db.session.commit()
-    return jsonify({"message": "Prompts updated", 'battles': battles, 'matchToCoordinates': match_to_coordinates}), 200
+    return jsonify({"message": "Prompts updated", 'battles': battles}), 200
 
 @app.route("/list_battles_by_group", methods=["GET"])
 def list_battles_by_group():
@@ -219,7 +213,7 @@ def list_battles_by_group():
             "teamA_ID": b.prompt_1,
             "teamB_ID": b.prompt_2,
             "winner": winner_value,
-            "nextBattleId": b.next_match,
+            "nextBattleId": b.next_battle,
             "prompt_group_index": b.prompt_group_index,
             "Yposition": b.y_pos,
             "Xposition": b.x_pos,
@@ -260,8 +254,8 @@ def update_battle_winner():
         return jsonify({"error": "Battle not found"}), 404
         
     battle.winner = winner_prompt_id
-    if battle.next_match:
-        next_battle = Battle.query.get(battle.next_match)
+    if battle.next_battle:
+        next_battle = Battle.query.get(battle.next_battle)
         if (battle.prompt_group_index % 2) == 0:
             next_battle.prompt_1 = winner_prompt_id
         elif (battle.prompt_group_index % 2) == 1:
