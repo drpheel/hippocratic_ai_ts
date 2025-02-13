@@ -17,7 +17,6 @@ export interface Battle {
     winner: string | null;
     winnerId: number | null;
     nextBattleId: number | null;
-    parentMatchIds?: number[];
     Yposition: number;
     Xposition: number;
 }
@@ -27,15 +26,15 @@ export const Tournament: React.FC<TournamentProps> = ({ bracket, setStep }) => {
     const Y_OFFSET = 180;
     const ROUND_WIDTH = 200;
     const SCALE_FACTOR = 1.2;
-    const [selectedMatch, setSelectedMatch] = useState<Battle | null>(null);
+    const [selectedBattle, setSelectedBattle] = useState<Battle | null>(null);
     const [prompt1Response, setPrompt1Response] = useState("");
     const [prompt2Response, setPrompt2Response] = useState("");
     const [myBracket, setBracket] = useState<Battle[]>([...bracket]);
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
-    const handleMatchClick = async (match: Battle) => {
+    const handleBattleClick = async (battle: Battle) => {
         try {
-            const response = await fetch(`http://localhost:5000/get_battle?battle_id=${match.id}`);
+            const response = await fetch(`http://localhost:5000/get_battle?battle_id=${battle.id}`);
             if (!response.ok) throw new Error("Failed to retrieve battle");
             const data = await response.json();
             setPrompt1Response(data.prompt1Response || "");
@@ -43,46 +42,46 @@ export const Tournament: React.FC<TournamentProps> = ({ bracket, setStep }) => {
         } catch (error) {
             console.error(error);
         }
-        setSelectedMatch(match);
+        setSelectedBattle(battle);
     };;
 
     const handleSelectWinner = async (winner: string, winnerId: number | null) => {
 
-        const updatedBracket = myBracket.map((match) =>
-            match.id === selectedMatch?.id ? { ...match, winner } : match
+        const updatedBracket = myBracket.map((battle) =>
+            battle.id === selectedBattle?.id ? { ...battle, winner } : battle
         );
 
         try {
             await fetch("http://localhost:5000/update_battle_winner", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ battle_id: selectedMatch?.id, winner_prompt_id: winnerId }),
+                body: JSON.stringify({ battle_id: selectedBattle?.id, winner_prompt_id: winnerId }),
             });
         } catch (error) {
             console.error(error);
         }
 
         // Auto-fill next round on frontend
-        const nextMatch = myBracket.find((m) => m.id === selectedMatch?.nextBattleId);
-        if (nextMatch && selectedMatch) {
+        const nextBattle = myBracket.find((m) => m.id === selectedBattle?.nextBattleId);
+        if (nextBattle && selectedBattle) {
             const selectedIndex = updatedBracket.findIndex(
-                (m) => m.id === selectedMatch.id
+                (m) => m.id === selectedBattle.id
             );
             const nextIndex = updatedBracket.findIndex(
-                (m) => m.id === nextMatch.id
+                (m) => m.id === nextBattle.id
             );
 
             updatedBracket[nextIndex] = {
-                ...nextMatch,
-                teamA: selectedIndex % 2 === 0 ? winner : nextMatch.teamA,
-                teamA_ID: selectedIndex % 2 === 0 ? winnerId : nextMatch.teamA_ID,
-                teamB: selectedIndex % 2 === 1 ? winner : nextMatch.teamB,
-                teamB_ID: selectedIndex % 2 === 1 ? winnerId : nextMatch.teamB_ID,
+                ...nextBattle,
+                teamA: selectedIndex % 2 === 0 ? winner : nextBattle.teamA,
+                teamA_ID: selectedIndex % 2 === 0 ? winnerId : nextBattle.teamA_ID,
+                teamB: selectedIndex % 2 === 1 ? winner : nextBattle.teamB,
+                teamB_ID: selectedIndex % 2 === 1 ? winnerId : nextBattle.teamB_ID,
             };
         }
 
         setBracket(updatedBracket);
-        setSelectedMatch(null);
+        setSelectedBattle(null);
     };
 
     const TOTAL_HEIGHT = (myBracket.length / 2) * Y_OFFSET
@@ -111,16 +110,16 @@ export const Tournament: React.FC<TournamentProps> = ({ bracket, setStep }) => {
             canvasContext.clearRect(0, 0, canvas.width, canvas.height);
         }
 
-        // Draw connecting lines for each match that leads to a next match
-        myBracket.forEach(match => {
-            if (match.nextBattleId) {
-                const nextMatch = myBracket.find(m => m.id === match.nextBattleId);
-                if (nextMatch) {
+        // Draw connecting lines for each battle that leads to a next battle
+        myBracket.forEach(battle => {
+            if (battle.nextBattleId) {
+                const nextBattle = myBracket.find(m => m.id === battle.nextBattleId);
+                if (nextBattle) {
                     // Calculate approximate center positions; adjust offsets as needed
-                    const startX = (match.Xposition + X_OFFSET) * SCALE_FACTOR;
-                    const startY = match.Yposition + Y_OFFSET; // 
-                    const endX = (nextMatch.Xposition + X_OFFSET) * SCALE_FACTOR;
-                    const endY = nextMatch.Yposition + Y_OFFSET;
+                    const startX = (battle.Xposition + X_OFFSET) * SCALE_FACTOR;
+                    const startY = battle.Yposition + Y_OFFSET; // 
+                    const endX = (nextBattle.Xposition + X_OFFSET) * SCALE_FACTOR;
+                    const endY = nextBattle.Yposition + Y_OFFSET;
                     if (canvasContext) {
                         canvasContext.beginPath();
                         canvasContext.moveTo(startX, startY);
@@ -152,7 +151,7 @@ export const Tournament: React.FC<TournamentProps> = ({ bracket, setStep }) => {
             </div>
             <div className="bracket-container">
                 <div className="bracket" style={{ position: "relative" }}>
-                    {[...new Set(myBracket.map((match) => match.round))].map((round) => {
+                    {[...new Set(myBracket.map((battle) => battle.round))].map((round) => {
                         const roundStyle = {
                             height: `${TOTAL_HEIGHT}px`,
                             left: `${(round - 1) * ROUND_WIDTH}px`,
@@ -160,29 +159,29 @@ export const Tournament: React.FC<TournamentProps> = ({ bracket, setStep }) => {
                         return (
                             <div key={round} className="round" style={roundStyle}>
                                 {myBracket
-                                    .filter((match) => match.round === round)
-                                    .map((match) => {
+                                    .filter((battle) => battle.round === round)
+                                    .map((battle) => {
                                         const containerStyle = {
-                                            top: `${match.Yposition + X_OFFSET}px`, // Adjust as needed
+                                            top: `${battle.Yposition + X_OFFSET}px`, // Adjust as needed
                                             transform: "translateY(-60%)"
                                         };
                                         return (
-                                            <div key={match.id}>
+                                            <div key={battle.id}>
                                                 <div
-                                                    key={match.id}
-                                                    className={`match-container ${match.nextBattleId ? "with-line" : ""}`}
+                                                    key={battle.id}
+                                                    className={`battle-container ${battle.nextBattleId ? "with-line" : ""}`}
                                                     style={containerStyle}
                                                 >
-                                                    <div className="match" onClick={() => handleMatchClick(match)}>
-                                                        <Tooltip title={match?.teamA?.length > 10 ? match.teamA : ""} disableHoverListener={match?.teamA?.length <= 10}>
-                                                            <div className={`team ${match.winner === match.teamA ? "winner" : ""}`}>
-                                                                {match?.teamA?.length > 10 ? match.teamA.substring(0, 10) + "..." : match.teamA}
+                                                    <div className="battle" onClick={() => handleBattleClick(battle)}>
+                                                        <Tooltip title={battle?.teamA?.length > 10 ? battle.teamA : ""} disableHoverListener={battle?.teamA?.length <= 10}>
+                                                            <div className={`team ${battle.winner === battle.teamA ? "winner" : ""}`}>
+                                                                {battle?.teamA?.length > 10 ? battle.teamA.substring(0, 10) + "..." : battle.teamA}
                                                             </div>
                                                         </Tooltip>
                                                         <div className="vs">vs</div>
-                                                        <Tooltip title={match?.teamB?.length > 10 ? match.teamB : ""} disableHoverListener={match?.teamB?.length <= 10}>
-                                                            <div className={`team ${match.winner === match.teamB ? "winner" : ""}`}>
-                                                                {match?.teamB?.length > 10 ? match.teamB.substring(0, 10) + "..." : match.teamB}
+                                                        <Tooltip title={battle?.teamB?.length > 10 ? battle.teamB : ""} disableHoverListener={battle?.teamB?.length <= 10}>
+                                                            <div className={`team ${battle.winner === battle.teamB ? "winner" : ""}`}>
+                                                                {battle?.teamB?.length > 10 ? battle.teamB.substring(0, 10) + "..." : battle.teamB}
                                                             </div>
                                                         </Tooltip>
                                                     </div>
@@ -195,42 +194,42 @@ export const Tournament: React.FC<TournamentProps> = ({ bracket, setStep }) => {
                     })}
                 </div>
                 <Modal
-                    isOpen={!!selectedMatch}
-                    onRequestClose={() => setSelectedMatch(null)}
+                    isOpen={!!selectedBattle}
+                    onRequestClose={() => setSelectedBattle(null)}
                     style={{ overlay: { zIndex: 3 } }}
                 >
-                    {selectedMatch && (
+                    {selectedBattle && (
                         <>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                 <h2>Select Winner</h2>
-                                <Button onClick={() => setSelectedMatch(null)}>
+                                <Button onClick={() => setSelectedBattle(null)}>
                                     Cancel
                                 </Button>
                             </div>
                             <div style={{ display: "flex", gap: "20px" }}>
                                 <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "50%" }}>
-                                    <Button color="warning" disabled={!selectedMatch.teamA} onClick={() => handleSelectWinner(selectedMatch.teamA, selectedMatch?.teamA_ID)}>
-                                        {selectedMatch.teamA ? selectedMatch.teamA : "Bye"}
+                                    <Button color="warning" disabled={!selectedBattle.teamA} onClick={() => handleSelectWinner(selectedBattle.teamA, selectedBattle?.teamA_ID)}>
+                                        {selectedBattle.teamA ? selectedBattle.teamA : "Bye"}
                                     </Button>
                                     <TextField
                                         fullWidth
                                         multiline
                                         rows={20}
-                                        label={`${selectedMatch?.teamA}`}
+                                        label={`${selectedBattle?.teamA}`}
                                         variant="outlined"
                                         value={prompt1Response}
                                         onChange={() => { }}
                                     />
                                 </div>
                                 <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "50%" }}>
-                                    <Button disabled={!selectedMatch.teamB} color="secondary" onClick={() => handleSelectWinner(selectedMatch.teamB, selectedMatch?.teamB_ID)}>
-                                        {selectedMatch.teamB ?  selectedMatch.teamB : "Bye" }   
+                                    <Button disabled={!selectedBattle.teamB} color="secondary" onClick={() => handleSelectWinner(selectedBattle.teamB, selectedBattle?.teamB_ID)}>
+                                        {selectedBattle.teamB ?  selectedBattle.teamB : "Bye" }   
                                     </Button>
                                     <TextField
                                         fullWidth
                                         multiline
                                         rows={20}
-                                        label={`${selectedMatch?.teamB}`}
+                                        label={`${selectedBattle?.teamB}`}
                                         variant="outlined"
                                         value={prompt2Response}
                                         onChange={() => { }}
