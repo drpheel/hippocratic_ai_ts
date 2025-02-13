@@ -135,8 +135,8 @@ def update_prompts():
             "teamB_ID": data[i + 1]['id'] if i + 1 < len(data) else None,
             "winner": None,
             "nextBattleId": None,
-            "Yposition": new_battle.y_pos,
-            "Xposition": new_battle.x_pos
+            "yPosition": new_battle.y_pos,
+            "xPosition": new_battle.x_pos
         }
         current_battles.append(battle_blob)
 
@@ -150,11 +150,11 @@ def update_prompts():
         for i in range(0, len(current_battles), 2):
             if i + 1 < len(current_battles):
                 y_pos = (
-                    current_battles[i]["Yposition"]
-                    + current_battles[i + 1]["Yposition"]
+                    current_battles[i]["yPosition"]
+                    + current_battles[i + 1]["yPosition"]
                 ) / 2
             else:
-                y_pos = current_battles[i]["Yposition"]
+                y_pos = current_battles[i]["yPosition"]
             new_battle = Battle(prompt_1=None, prompt_2=None, round=current_round, prompt_group_id=group_id, prompt_group_index=battle_index, x_pos=(current_round - 1) * 200, y_pos=y_pos)
             db.session.add(new_battle)
             db.session.commit()
@@ -168,8 +168,8 @@ def update_prompts():
                 "teamB_ID": None,
                 "winner": None,
                 "nextBattleId": None,
-                "Yposition": new_battle.y_pos,
-                "Xposition": new_battle.x_pos
+                "yPosition": new_battle.y_pos,
+                "xPosition": new_battle.x_pos
             }
             current_battles[i]["nextBattleId"] = new_battle.id
             logging.info(f"Current battle: {current_battles[i]}")
@@ -215,8 +215,8 @@ def list_battles_by_group():
             "winner": winner_value,
             "nextBattleId": b.next_battle,
             "prompt_group_index": b.prompt_group_index,
-            "Yposition": b.y_pos,
-            "Xposition": b.x_pos,
+            "yPosition": b.y_pos,
+            "xPosition": b.x_pos,
         })
     return jsonify(battle_blobs), 200
 
