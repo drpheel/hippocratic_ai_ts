@@ -78,7 +78,7 @@ export const PromptGenerator: React.FC<PromptGeneratorProps> = ({
                 onClick={() => setShowGroups(true)}
                 className="clickable-text"
             >
-                ...or view previous Question Prompts!
+                ...or view previous questions!
             </Typography>
             <Box mb={2} display="flex" alignItems="center" className="menu-box">
                 <Typography style={{ marginRight: 10 }}> <h3> Question: </h3></Typography>
