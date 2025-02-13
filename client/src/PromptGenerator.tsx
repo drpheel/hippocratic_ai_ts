@@ -46,7 +46,7 @@ export const PromptGenerator: React.FC<PromptGeneratorProps> = ({
     const handleSaveAndProceed = async () => {
         setLoading(true);
         try {
-            const response = await fetch("http://localhost:5000/update_prompts", {
+            const response = await fetch("http://localhost:5000/update_prompts_and_create_battles", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(prompts),

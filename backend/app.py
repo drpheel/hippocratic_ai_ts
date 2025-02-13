@@ -8,6 +8,7 @@ import random
 import string
 import logging
 
+# TODO: Add proper error handling for the db
 
 def get_db_url():
     db_name = os.environ.get('CLOUD_SQL_DATABASE_NAME')
@@ -29,7 +30,6 @@ def generate_random_value(length=10):
 
 app = Flask(__name__)
 db_url = get_db_url()
-logging.info(f"DB URL: {db_url}")
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 CORS(app, supports_credentials=True, origins=["http://localhost:5173"])
@@ -95,8 +95,9 @@ def create_group():
     result = [{"id": p.id, "value": p.value, "response": p.response, "prompt_group_id": p.prompt_group_id} for p in prompts]
     return jsonify(result), 200
 
-@app.route("/update_prompts", methods=["POST"])
-def update_prompts():
+@app.route("/update_prompts_and_create_battles", methods=["POST"])
+def update_prompts_and_create_battles():
+    RESPONSE_LENGTH = 200
     data = request.get_json()  # expects a list of {"id":..., "value":..., "response":...}
     for item in data:
         prompt_id = item.get("id")
@@ -106,7 +107,7 @@ def update_prompts():
         if existing_prompt:
             existing_prompt.value = new_value
             words = []
-            while len(words) < 200:
+            while len(words) < RESPONSE_LENGTH:
                 sentence = RandomSentence().sentence()
                 words.extend(sentence.split())
             existing_prompt.response = " ".join(words[:500])
@@ -123,16 +124,17 @@ def update_prompts():
             new_battle = Battle(prompt_1=data[i]['id'], prompt_2=data[i + 1]['id'], round=current_round, prompt_group_id=group_id, prompt_group_index=battle_index, x_pos=0, y_pos=(len(current_battles) * 140))
         else:
             new_battle = Battle(prompt_1=data[i]['id'], prompt_2=None, round=current_round, prompt_group_id=group_id, prompt_group_index=battle_index, x_pos=0, y_pos=(len(current_battles) * 140))
+        # TODO: batch db adds for performance
         db.session.add(new_battle)
         db.session.commit()
         battle_index += 1
         battle_blob = {
             "id": new_battle.id,
             "round": current_round,
-            "teamA": data[i]['value'] if i < len(data) else "",
-            "teamB": data[i + 1]['value'] if i + 1 < len(data) else "",
-            "teamA_ID": data[i]['id'] if i < len(data) else None,
-            "teamB_ID": data[i + 1]['id'] if i + 1 < len(data) else None,
+            "prompt1": data[i]['value'] if i < len(data) else "",
+            "prompt2": data[i + 1]['value'] if i + 1 < len(data) else "",
+            "prompt1_ID": data[i]['id'] if i < len(data) else None,
+            "prompt2_ID": data[i + 1]['id'] if i + 1 < len(data) else None,
             "winner": None,
             "nextBattleId": None,
             "yPosition": new_battle.y_pos,
@@ -146,7 +148,6 @@ def update_prompts():
     while len(current_battles) > 1:
         current_round += 1
         next_battles = []
-        logging.info(f"current battles {current_battles}")
         for i in range(0, len(current_battles), 2):
             if i + 1 < len(current_battles):
                 y_pos = (
@@ -156,23 +157,23 @@ def update_prompts():
             else:
                 y_pos = current_battles[i]["yPosition"]
             new_battle = Battle(prompt_1=None, prompt_2=None, round=current_round, prompt_group_id=group_id, prompt_group_index=battle_index, x_pos=(current_round - 1) * 200, y_pos=y_pos)
+            # TODO: batch db adds for performance
             db.session.add(new_battle)
             db.session.commit()
             battle_index += 1
             next_battle_blob = {
                 "id": new_battle.id,
                 "round": current_round,
-                "teamA": "",
-                "teamB": "",
-                "teamA_ID": None,
-                "teamB_ID": None,
+                "prompt1": "",
+                "prompt2": "",
+                "prompt1_ID": None,
+                "prompt2_ID": None,
                 "winner": None,
                 "nextBattleId": None,
                 "yPosition": new_battle.y_pos,
                 "xPosition": new_battle.x_pos
             }
             current_battles[i]["nextBattleId"] = new_battle.id
-            logging.info(f"Current battle: {current_battles[i]}")
             parent_battle_a = Battle.query.filter_by(id=current_battles[i]["id"]).first()
             parent_battle_a.next_battle = new_battle.id
             if i + 1 < len(current_battles):
@@ -208,10 +209,10 @@ def list_battles_by_group():
         battle_blobs.append({
             "id": b.id,
             "round": b.round,
-            "teamA": p1.value if p1 else None,
-            "teamB": p2.value if p2 else None,
-            "teamA_ID": b.prompt_1,
-            "teamB_ID": b.prompt_2,
+            "prompt1": p1.value if p1 else None,
+            "prompt2": p2.value if p2 else None,
+            "prompt1_ID": b.prompt_1,
+            "prompt2_ID": b.prompt_2,
             "winner": winner_value,
             "nextBattleId": b.next_battle,
             "prompt_group_index": b.prompt_group_index,

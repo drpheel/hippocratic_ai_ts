@@ -10,15 +10,15 @@ interface TournamentProps {
 export interface Battle {
     id: number;
     round: number;
-    teamA: string;
-    teamB: string;
-    teamA_ID: number | null;
-    teamB_ID: number | null;
+    prompt1: string;
+    prompt2: string;
+    prompt1_ID: number | null;
+    prompt2_ID: number | null;
     winner: string | null;
     winnerId: number | null;
     nextBattleId: number | null;
-    Yposition: number;
-    Xposition: number;
+    yPosition: number;
+    xPosition: number;
 }
 
 export const Tournament: React.FC<TournamentProps> = ({ bracket, setStep }) => {
@@ -73,10 +73,10 @@ export const Tournament: React.FC<TournamentProps> = ({ bracket, setStep }) => {
 
             updatedBracket[nextIndex] = {
                 ...nextBattle,
-                teamA: selectedIndex % 2 === 0 ? winner : nextBattle.teamA,
-                teamA_ID: selectedIndex % 2 === 0 ? winnerId : nextBattle.teamA_ID,
-                teamB: selectedIndex % 2 === 1 ? winner : nextBattle.teamB,
-                teamB_ID: selectedIndex % 2 === 1 ? winnerId : nextBattle.teamB_ID,
+                prompt1: selectedIndex % 2 === 0 ? winner : nextBattle.prompt1,
+                prompt1_ID: selectedIndex % 2 === 0 ? winnerId : nextBattle.prompt1_ID,
+                prompt2: selectedIndex % 2 === 1 ? winner : nextBattle.prompt2,
+                prompt2_ID: selectedIndex % 2 === 1 ? winnerId : nextBattle.prompt2_ID,
             };
         }
 
@@ -86,7 +86,7 @@ export const Tournament: React.FC<TournamentProps> = ({ bracket, setStep }) => {
 
     const TOTAL_HEIGHT = (myBracket.length / 2) * Y_OFFSET
 
-    // Draw the bracket lines for the tournament
+    // Draw the bracket lines for the tournament, using a canvas
     useEffect(() => {
         if (!canvasRef.current) return;
 
@@ -116,10 +116,10 @@ export const Tournament: React.FC<TournamentProps> = ({ bracket, setStep }) => {
                 const nextBattle = myBracket.find(m => m.id === battle.nextBattleId);
                 if (nextBattle) {
                     // Calculate approximate center positions; adjust offsets as needed
-                    const startX = (battle.Xposition + X_OFFSET) * SCALE_FACTOR;
-                    const startY = battle.Yposition + Y_OFFSET; // 
-                    const endX = (nextBattle.Xposition + X_OFFSET) * SCALE_FACTOR;
-                    const endY = nextBattle.Yposition + Y_OFFSET;
+                    const startX = (battle.xPosition + X_OFFSET) * SCALE_FACTOR;
+                    const startY = battle.yPosition + Y_OFFSET; // 
+                    const endX = (nextBattle.xPosition + X_OFFSET) * SCALE_FACTOR;
+                    const endY = nextBattle.yPosition + Y_OFFSET;
                     if (canvasContext) {
                         canvasContext.beginPath();
                         canvasContext.moveTo(startX, startY);
@@ -162,7 +162,7 @@ export const Tournament: React.FC<TournamentProps> = ({ bracket, setStep }) => {
                                     .filter((battle) => battle.round === round)
                                     .map((battle) => {
                                         const containerStyle = {
-                                            top: `${battle.Yposition + X_OFFSET}px`, // Adjust as needed
+                                            top: `${battle.yPosition + X_OFFSET}px`, // Adjust as needed
                                             transform: "translateY(-60%)"
                                         };
                                         return (
@@ -173,15 +173,15 @@ export const Tournament: React.FC<TournamentProps> = ({ bracket, setStep }) => {
                                                     style={containerStyle}
                                                 >
                                                     <div className="battle" onClick={() => handleBattleClick(battle)}>
-                                                        <Tooltip title={battle?.teamA?.length > 10 ? battle.teamA : ""} disableHoverListener={battle?.teamA?.length <= 10}>
-                                                            <div className={`team ${battle.winner === battle.teamA ? "winner" : ""}`}>
-                                                                {battle?.teamA?.length > 10 ? battle.teamA.substring(0, 10) + "..." : battle.teamA}
+                                                        <Tooltip title={battle?.prompt1?.length > 10 ? battle.prompt1 : ""} disableHoverListener={battle?.prompt1?.length <= 10}>
+                                                            <div className={`team ${battle.winner === battle.prompt1 ? "winner" : ""}`}>
+                                                                {battle?.prompt1?.length > 10 ? battle.prompt1.substring(0, 10) + "..." : battle.prompt1}
                                                             </div>
                                                         </Tooltip>
                                                         <div className="vs">vs</div>
-                                                        <Tooltip title={battle?.teamB?.length > 10 ? battle.teamB : ""} disableHoverListener={battle?.teamB?.length <= 10}>
-                                                            <div className={`team ${battle.winner === battle.teamB ? "winner" : ""}`}>
-                                                                {battle?.teamB?.length > 10 ? battle.teamB.substring(0, 10) + "..." : battle.teamB}
+                                                        <Tooltip title={battle?.prompt2?.length > 10 ? battle.prompt2 : ""} disableHoverListener={battle?.prompt2?.length <= 10}>
+                                                            <div className={`team ${battle.winner === battle.prompt2 ? "winner" : ""}`}>
+                                                                {battle?.prompt2?.length > 10 ? battle.prompt2.substring(0, 10) + "..." : battle.prompt2}
                                                             </div>
                                                         </Tooltip>
                                                     </div>
@@ -208,28 +208,28 @@ export const Tournament: React.FC<TournamentProps> = ({ bracket, setStep }) => {
                             </div>
                             <div style={{ display: "flex", gap: "20px" }}>
                                 <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "50%" }}>
-                                    <Button color="warning" disabled={!selectedBattle.teamA} onClick={() => handleSelectWinner(selectedBattle.teamA, selectedBattle?.teamA_ID)}>
-                                        {selectedBattle.teamA ? selectedBattle.teamA : "Bye"}
+                                    <Button color="warning" disabled={!selectedBattle.prompt1} onClick={() => handleSelectWinner(selectedBattle.prompt1, selectedBattle?.prompt1_ID)}>
+                                        {selectedBattle.prompt1 ? selectedBattle.prompt1 : "Bye"}
                                     </Button>
                                     <TextField
                                         fullWidth
                                         multiline
                                         rows={20}
-                                        label={`${selectedBattle?.teamA}`}
+                                        label={`${selectedBattle?.prompt1}`}
                                         variant="outlined"
                                         value={prompt1Response}
                                         onChange={() => { }}
                                     />
                                 </div>
                                 <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "50%" }}>
-                                    <Button disabled={!selectedBattle.teamB} color="secondary" onClick={() => handleSelectWinner(selectedBattle.teamB, selectedBattle?.teamB_ID)}>
-                                        {selectedBattle.teamB ?  selectedBattle.teamB : "Bye" }   
+                                    <Button disabled={!selectedBattle.prompt2} color="secondary" onClick={() => handleSelectWinner(selectedBattle.prompt2, selectedBattle?.prompt2_ID)}>
+                                        {selectedBattle.prompt2 ?  selectedBattle.prompt2 : "Bye" }   
                                     </Button>
                                     <TextField
                                         fullWidth
                                         multiline
                                         rows={20}
-                                        label={`${selectedBattle?.teamB}`}
+                                        label={`${selectedBattle?.prompt2}`}
                                         variant="outlined"
                                         value={prompt2Response}
                                         onChange={() => { }}
