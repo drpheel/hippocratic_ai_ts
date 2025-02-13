@@ -38,5 +38,4 @@ ALTER TABLE BATTLE
 ADD COLUMN next_battle INT DEFAULT NULL,
 ADD CONSTRAINT fk_next_battle FOREIGN KEY (next_battle) REFERENCES BATTLE(id);
 
-
-SET GLOBAL sort_buffer_size = 1024000000;
+SET GLOBAL sort_buffer_size = 2097152;

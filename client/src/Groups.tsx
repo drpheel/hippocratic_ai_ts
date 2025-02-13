@@ -47,26 +47,33 @@ export const Groups: React.FC<GroupsProps> = ({ setBracket, setShowGroups, onPro
                 ...or enter a new question!
             </Typography>
             <Box className="menu-box">
-                <TableContainer component={Paper}>
-                    <Table aria-label="groups table">
-                        <TableHead>
-                            <TableRow>
-                                <TableCell style={{ minWidth: 100, fontFamily: "inherit" }} >Question</TableCell>
-                                <TableCell></TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {groups.map((g) => (
-                                <TableRow key={g.id}>
-                                    <TableCell style={{ minWidth: 100, fontFamily: "inherit" }}>{g.question}</TableCell>
-                                    <TableCell>
-                                        <button onClick={() => handleViewBattles(g.id)} style={{ fontFamily: "inherit" }}><b>View Battles</b></button>
-                                    </TableCell>
+                {groups.length > 0 && (
+                    <TableContainer component={Paper}>
+                        <Table>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell style={{ minWidth: 100 }}>Question</TableCell>
+                                    <TableCell></TableCell>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
+                            </TableHead>
+                            <TableBody>
+                                {groups.map((g) => (
+                                    <TableRow key={g.id}>
+                                        <TableCell style={{ minWidth: 100 }}>{g.question}</TableCell>
+                                        <TableCell>
+                                            <button
+                                                onClick={() => handleViewBattles(g.id)}
+                                                style={{ fontFamily: "inherit" }}
+                                            >
+                                                <b>View Battles</b>
+                                            </button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                )}
             </Box>
         </Box>
     );

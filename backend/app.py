@@ -97,6 +97,8 @@ def create_group():
 
 @app.route("/update_prompts_and_create_battles", methods=["POST"])
 def update_prompts_and_create_battles():
+    MATCH_HEIGHT = 140 # height of each match on the frontend
+    ROUND_WIDTH = 200 # width of each round on the frontend
     RESPONSE_LENGTH = 200
     data = request.get_json()  # expects a list of {"id":..., "value":..., "response":...}
     for item in data:
@@ -121,20 +123,21 @@ def update_prompts_and_create_battles():
     # Create first round
     for i in range(0, len(data), 2):
         if i + 1 < len(data):
-            new_battle = Battle(prompt_1=data[i]['id'], prompt_2=data[i + 1]['id'], round=current_round, prompt_group_id=group_id, prompt_group_index=battle_index, x_pos=0, y_pos=(len(current_battles) * 140))
+            new_battle = Battle(prompt_1=data[i]['id'], prompt_2=data[i + 1]['id'], round=current_round, prompt_group_id=group_id, prompt_group_index=battle_index, x_pos=0, y_pos=(len(current_battles) * MATCH_HEIGHT))
         else:
-            new_battle = Battle(prompt_1=data[i]['id'], prompt_2=None, round=current_round, prompt_group_id=group_id, prompt_group_index=battle_index, x_pos=0, y_pos=(len(current_battles) * 140))
+            new_battle = Battle(prompt_1=data[i]['id'], prompt_2=None, round=current_round, prompt_group_id=group_id, prompt_group_index=battle_index, x_pos=0, y_pos=(len(current_battles) * MATCH_HEIGHT))
         # TODO: batch db adds for performance
         db.session.add(new_battle)
         db.session.commit()
         battle_index += 1
+        # Save the blobs for the response
         battle_blob = {
             "id": new_battle.id,
             "round": current_round,
             "prompt1": data[i]['value'] if i < len(data) else "",
             "prompt2": data[i + 1]['value'] if i + 1 < len(data) else "",
-            "prompt1_ID": data[i]['id'] if i < len(data) else None,
-            "prompt2_ID": data[i + 1]['id'] if i + 1 < len(data) else None,
+            "prompt1ID": data[i]['id'] if i < len(data) else None,
+            "prompt2ID": data[i + 1]['id'] if i + 1 < len(data) else None,
             "winner": None,
             "nextBattleId": None,
             "yPosition": new_battle.y_pos,
@@ -150,13 +153,14 @@ def update_prompts_and_create_battles():
         next_battles = []
         for i in range(0, len(current_battles), 2):
             if i + 1 < len(current_battles):
+                # Place the battle of the next round in the y-axis middle of the two battles of the current round 
                 y_pos = (
                     current_battles[i]["yPosition"]
                     + current_battles[i + 1]["yPosition"]
                 ) / 2
             else:
                 y_pos = current_battles[i]["yPosition"]
-            new_battle = Battle(prompt_1=None, prompt_2=None, round=current_round, prompt_group_id=group_id, prompt_group_index=battle_index, x_pos=(current_round - 1) * 200, y_pos=y_pos)
+            new_battle = Battle(prompt_1=None, prompt_2=None, round=current_round, prompt_group_id=group_id, prompt_group_index=battle_index, x_pos=(current_round - 1) * ROUND_WIDTH, y_pos=y_pos)
             # TODO: batch db adds for performance
             db.session.add(new_battle)
             db.session.commit()
@@ -166,8 +170,8 @@ def update_prompts_and_create_battles():
                 "round": current_round,
                 "prompt1": "",
                 "prompt2": "",
-                "prompt1_ID": None,
-                "prompt2_ID": None,
+                "prompt1ID": None,
+                "prompt2ID": None,
                 "winner": None,
                 "nextBattleId": None,
                 "yPosition": new_battle.y_pos,
@@ -211,8 +215,8 @@ def list_battles_by_group():
             "round": b.round,
             "prompt1": p1.value if p1 else None,
             "prompt2": p2.value if p2 else None,
-            "prompt1_ID": b.prompt_1,
-            "prompt2_ID": b.prompt_2,
+            "prompt1ID": b.prompt_1,
+            "prompt2ID": b.prompt_2,
             "winner": winner_value,
             "nextBattleId": b.next_battle,
             "prompt_group_index": b.prompt_group_index,

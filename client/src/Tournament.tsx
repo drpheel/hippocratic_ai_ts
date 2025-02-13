@@ -12,8 +12,8 @@ export interface Battle {
     round: number;
     prompt1: string;
     prompt2: string;
-    prompt1_ID: number | null;
-    prompt2_ID: number | null;
+    prompt1ID: number | null;
+    prompt2ID: number | null;
     winner: string | null;
     winnerId: number | null;
     nextBattleId: number | null;
@@ -61,7 +61,7 @@ export const Tournament: React.FC<TournamentProps> = ({ bracket, setStep }) => {
             console.error(error);
         }
 
-        // Auto-fill next round on frontend
+        // Update next round on frontend
         const nextBattle = myBracket.find((m) => m.id === selectedBattle?.nextBattleId);
         if (nextBattle && selectedBattle) {
             const selectedIndex = updatedBracket.findIndex(
@@ -74,9 +74,9 @@ export const Tournament: React.FC<TournamentProps> = ({ bracket, setStep }) => {
             updatedBracket[nextIndex] = {
                 ...nextBattle,
                 prompt1: selectedIndex % 2 === 0 ? winner : nextBattle.prompt1,
-                prompt1_ID: selectedIndex % 2 === 0 ? winnerId : nextBattle.prompt1_ID,
+                prompt1ID: selectedIndex % 2 === 0 ? winnerId : nextBattle.prompt1ID,
                 prompt2: selectedIndex % 2 === 1 ? winner : nextBattle.prompt2,
-                prompt2_ID: selectedIndex % 2 === 1 ? winnerId : nextBattle.prompt2_ID,
+                prompt2ID: selectedIndex % 2 === 1 ? winnerId : nextBattle.prompt2ID,
             };
         }
 
@@ -208,7 +208,7 @@ export const Tournament: React.FC<TournamentProps> = ({ bracket, setStep }) => {
                             </div>
                             <div style={{ display: "flex", gap: "20px" }}>
                                 <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "50%" }}>
-                                    <Button color="warning" disabled={!selectedBattle.prompt1} onClick={() => handleSelectWinner(selectedBattle.prompt1, selectedBattle?.prompt1_ID)}>
+                                    <Button color="warning" disabled={!selectedBattle.prompt1} onClick={() => handleSelectWinner(selectedBattle.prompt1, selectedBattle?.prompt1ID)}>
                                         {selectedBattle.prompt1 ? selectedBattle.prompt1 : "Bye"}
                                     </Button>
                                     <TextField
@@ -222,7 +222,7 @@ export const Tournament: React.FC<TournamentProps> = ({ bracket, setStep }) => {
                                     />
                                 </div>
                                 <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "50%" }}>
-                                    <Button disabled={!selectedBattle.prompt2} color="secondary" onClick={() => handleSelectWinner(selectedBattle.prompt2, selectedBattle?.prompt2_ID)}>
+                                    <Button disabled={!selectedBattle.prompt2} color="secondary" onClick={() => handleSelectWinner(selectedBattle.prompt2, selectedBattle?.prompt2ID)}>
                                         {selectedBattle.prompt2 ?  selectedBattle.prompt2 : "Bye" }   
                                     </Button>
                                     <TextField
